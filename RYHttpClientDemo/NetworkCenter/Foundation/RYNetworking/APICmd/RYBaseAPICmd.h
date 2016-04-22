@@ -137,7 +137,9 @@ typedef NS_ENUM (NSUInteger, RYBaseAPICmdErrorType){
 - (NSString *)methodName;
 - (NSString *)serviceType;
 - (BOOL)isCacelRequest;
-
+- (BOOL)isRequestHook;
+//验证返回的数据格式是否正确
+- (id)jsonValidator;
 @end
 
 /*************************************************************************************************/
@@ -146,6 +148,10 @@ typedef NS_ENUM (NSUInteger, RYBaseAPICmdErrorType){
 //api回调 返回数据，由controller或者持有者实现
 @protocol APICmdApiCallBackDelegate <NSObject>
 @required
+
+- (void)apiCmdDidSuccess:(RYBaseAPICmd *)baseAPICmd responseData:(id)responseData;
+- (void)apiCmdDidFailed:(RYBaseAPICmd *)baseAPICmd error:(NSError *)error;
+@optional
 - (void)apiCmdDidSuccess:(RYBaseAPICmd *)baseAPICmd response:(RYURLResponse *)response;
 - (void)apiCmdDidFailed:(RYBaseAPICmd *)baseAPICmd errorType:(RYBaseAPICmdErrorType)errorType;
 @end
@@ -155,7 +161,7 @@ typedef NS_ENUM (NSUInteger, RYBaseAPICmdErrorType){
 /*  获取 请求的参数写法  路径参数 ||
  *  路径参数 " ||xxx " ：
  *  如 api_v2/FundProduct/{fundProductId}/ExtAttribute
- *  在XXXAPICmd 中 "- (NSString *)methodName" 的返回值 为：api_v2/FundProduct/ ||fundProductId /ExtAttribute
+ *  在XXXAPICmd 中 "- (NSString *)methodName" 的返回值 为：api_v2/FundProduct/||fundProductId/ExtAttribute
  *  请求格式 @{@"||fundProductId":@"ueoieu642837425234"}
  *
  *  如果请求为POST API 和 上传中都有参数， API中的参数：路径参数同上   body参数前加":"，如：
@@ -170,7 +176,7 @@ typedef NS_ENUM (NSUInteger, RYBaseAPICmdErrorType){
  */
 @protocol APICmdParamSourceDelegate <NSObject>
 @required
-- (NSDictionary *)paramsForApi:(RYBaseAPICmd *)manager;
+- (NSDictionary *)paramsForApi:(RYBaseAPICmd *)apiCmd;
 @end
 
 /*************************************************************************************************/
@@ -197,15 +203,24 @@ typedef NS_ENUM (NSUInteger, RYBaseAPICmdErrorType){
 - (void)apiCmd:(RYBaseAPICmd *)apiCmd afterCallingAPIWithParams:(NSDictionary *)params;
 
 @end
-
+/*************************************************************************************************/
+/*                               FYAPIManagerCallbackDataReformer                                */
+/*************************************************************************************************/
+// 拦截器
+@protocol APICmdAspect <NSObject>
+@optional
+- (void)apiCmd:(RYBaseAPICmd *)apiCmd request:(NSMutableURLRequest *)request;
+@end
 
 
 @interface RYBaseAPICmd : NSObject
 
-@property (nonatomic, weak) NSObject<RYBaseAPICmdDelegate> *child;
-@property (nonatomic, weak) id<APICmdApiCallBackDelegate> delegate;
-@property (nonatomic, weak) id<APICmdInterceptor> interceptor;
-@property (nonatomic, weak) id<APICmdParamSourceDelegate> paramSource;
+@property (nonatomic, weak) NSObject<RYBaseAPICmdDelegate>  *child;
+@property (nonatomic, weak) id<APICmdApiCallBackDelegate>   delegate;
+@property (nonatomic, weak) id<APICmdInterceptor>           interceptor;
+@property (nonatomic, weak) id<APICmdParamSourceDelegate>   paramSource;
+@property (nonatomic, weak) id<APICmdAspect>                aspect;
+
 
 @property (nonatomic, copy) id reformParams;
 @property (nonatomic, copy) NSString *path;
